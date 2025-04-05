@@ -4,8 +4,9 @@
     <title>Tic Tac Toe</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
-    <link rel="icon" href="https://upload.wikimedia.org/wikipedia/commons/thumb/3/34/X_mark.svg/1200px-X_mark.svg.png" type="image/x-icon">
+    <link rel="icon" href="./twitter.3.ico" type="image/x-icon">
     <style>
+        /* CSS styles remain the same as previous version */
         body {
             background-color: #111827;
             color: #f9fafb;
@@ -16,7 +17,6 @@
             min-height: 100vh;
             margin: 0;
             padding: 0;
-            overflow: hidden;
         }
 
         .container {
@@ -55,10 +55,8 @@
             grid-template-columns: repeat(3, 100px);
             grid-template-rows: repeat(3, 100px);
             gap: 0.5rem;
-            margin: 0 auto 1.5rem;
+            margin: 1.5rem auto;
             perspective: 500px;
-            width: 100%;
-            max-width: 310px;
         }
 
         .cell {
@@ -74,7 +72,7 @@
             transition: background-color 0.2s ease, transform 0.5s ease;
             background-color: #374151;
             color: #f9fafb;
-            transform: rotateY(0deg);
+            transform-style: preserve-3d;
         }
 
         .cell:hover {
@@ -82,14 +80,20 @@
             transform: scale(1.05);
         }
 
+        .cell.x, .cell.o {
+            animation-duration: 0.8s;
+            animation-timing-function: ease;
+            animation-fill-mode: forwards;
+        }
+
         .cell.x {
             color: #f472b6;
-            animation: flipX 0.8s ease;
+            animation-name: flipX;
         }
 
         .cell.o {
             color: #8b5cf6;
-            animation: flipO 0.8s ease;
+            animation-name: flipO;
         }
 
         @keyframes flipX {
@@ -98,8 +102,9 @@
         }
         @keyframes flipO {
           from { transform: rotateY(0deg); }
-          to { transform: rotateY(-360deg); }
+          to { transform: rotateY(360deg); }
         }
+
 
         #options {
             display: flex;
@@ -112,13 +117,12 @@
 
         .option-button {
             padding: 0.5rem 1rem;
-            margin: 0 0.5rem;
             background-color: #4b5563;
             color: #f9fafb;
             border: 2px solid #6b7280;
             border-radius: 0.375rem;
             cursor: pointer;
-            transition: background-color 0.2s ease, color 0.2s ease;
+            transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
             font-family: 'Press Start 2P', monospace;
             font-size: 0.7rem;
         }
@@ -148,29 +152,34 @@
             animation: pulseRed 2s infinite alternate;
         }
         @keyframes pulseRed {
-            from { background-color: #ef4444; }
-            to { background-color: #dc2626; }
+            from { background-color: #ef4444; transform: scale(1); }
+            to { background-color: #dc2626; transform: scale(1.03); }
         }
 
         #reset-button:hover {
             background-color: #dc2626;
+             animation-play-state: paused;
         }
 
         .game-over-overlay {
             position: fixed;
             inset: 0;
-            display: flex;
+            display: none;
             align-items: center;
             justify-content: center;
-            background-color: rgba(0, 0, 0, 0.8);
+            background-color: rgba(0, 0, 0, 0.85);
             z-index: 10;
             opacity: 0;
             transition: opacity 0.5s ease;
+            /* Add pointer-events: none when hidden to be extra sure */
+            pointer-events: none;
         }
 
         .game-over-overlay.show {
-            opacity: 1;
             display: flex;
+            opacity: 1;
+             /* Allow pointer events when shown */
+            pointer-events: auto;
         }
 
         .game-over-content {
@@ -180,38 +189,39 @@
             color: #f9fafb;
             font-size: 1.25rem;
             font-weight: bold;
+            text-align: center;
             transform: translateY(-20px);
-            transition: transform 0.5s ease;
+            transition: transform 0.5s ease 0.1s;
         }
 
         .game-over-overlay.show .game-over-content{
-             transform: translateY(0px);
-        }
-
-        .hidden {
-            display: none;
+            transform: translateY(0px);
         }
 
         @media (max-width: 640px) {
             .container {
                 padding: 15px;
             }
+             h1{
+                font-size: 1.2rem;
+            }
             #game-board {
                 grid-template-columns: repeat(3, 80px);
                 grid-template-rows: repeat(3, 80px);
-                max-width: 240px;
+                gap: 0.4rem;
             }
             .cell {
                 width: 80px;
                 height: 80px;
                 font-size: 2rem;
             }
-            .option-button {
+            .option-button, #reset-button {
                 font-size: 0.6rem;
                 padding: 0.5rem;
             }
-             h1{
-                font-size: 1rem
+             .game-over-content {
+                 font-size: 1rem;
+                 padding: 1.5rem;
              }
         }
     </style>
@@ -225,24 +235,25 @@
             <button class="option-button" id="player-vs-bot">vs Bot</button>
         </div>
         <button id="reset-button">Reset</button>
-        <div class="game-over-overlay hidden" id="game-over-overlay">
+        <div class="game-over-overlay" id="game-over-overlay">
             <div class="game-over-content" id="game-over-text"></div>
         </div>
     </div>
 
-    <script src="https://unpkg.com/tone"></script>
+    <script src="https://unpkg.com/tone@14.7.77/build/Tone.js"></script>
+
     <script>
-       // --- Game Setup ---
+        // --- Game Setup ---
         let board = ['', '', '', '', '', '', '', '', ''];
         let currentPlayer = 'X';
-        let gameMode = 'player-vs-player';
+        let gameMode = 'player-vs-player'; // Default mode
         let gameOver = false;
         let cells = [];
         let botMoveTimeout;
         let gameResetTimeout;
-        let botPlaying = false; // Add this flag
-        let audioContext; // Declare audioContext
+        let botPlaying = false; // Flag to prevent clicks during bot's turn
 
+        // --- DOM Elements ---
         const gameBoard = document.getElementById('game-board');
         const playerVsPlayerButton = document.getElementById('player-vs-player');
         const playerVsBotButton = document.getElementById('player-vs-bot');
@@ -250,308 +261,392 @@
         const gameOverOverlay = document.getElementById('game-over-overlay');
         const gameOverText = document.getElementById('game-over-text');
 
-        // --- Sound Effects (Tone.js) ---
-        let clickSound;
-        let winSound;
-        let drawSound;
+        // --- Audio ---
+        let audioContext;
+        let clickSound, winSound, drawSound;
+        let backgroundMusic;
+        let audioInitialized = false; // Flag to track if audio is ready
 
-        function initAudio() {
-            if (!audioContext) {
-                audioContext = new AudioContext();
-                Tone.setContext(audioContext);
+        // --- Audio Functions ---
+
+        // Tries to initialize Audio Context and Tone, returns true if successful/already running
+        async function initializeAudio() {
+            // If already initialized and context is running, return true immediately
+            if (audioInitialized && Tone.context && Tone.context.state === 'running') {
+                // console.log("Audio already initialized and running."); // Reduce console noise
+                return true;
+            }
+            // If already initialized but context got suspended, try resuming
+            if (audioInitialized && Tone.context && Tone.context.state === 'suspended') {
+                 try {
+                    console.log("Attempting to resume suspended AudioContext...");
+                    await Tone.context.resume();
+                    // Also ensure Tone itself is started after resume
+                    if (Tone.Transport.state !== "started") { // Check Tone's transport state
+                        await Tone.start();
+                        console.log("Tone.start() called after resume.");
+                    }
+                    console.log("AudioContext resumed successfully.");
+                    return true; // Successfully resumed
+                 } catch(e) {
+                     console.error("Error resuming existing AudioContext:", e);
+                     audioInitialized = false; // Mark as not initialized if resume fails
+                     return false;
+                 }
             }
 
-            if (audioContext.state === 'suspended') {
-                audioContext.resume().then(() => {
-                    console.log('AudioContext resumed');
-                    createSoundEffects(); // Call this after successful resume
-                }).catch(error => {
-                    console.error('Error resuming audio context', error);
-                });
-            } else {
-                 createSoundEffects();
+            // --- First time initialization ---
+            if (!audioInitialized) {
+                try {
+                    console.log("Attempting first-time audio initialization...");
+                    // Create AudioContext if it doesn't exist
+                    if (!audioContext) {
+                        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                        console.log("AudioContext created.");
+                    }
+
+                    // Resume if suspended (needed for some browsers on creation)
+                    if (audioContext.state === 'suspended') {
+                        console.log("AudioContext is suspended, attempting resume...");
+                        await audioContext.resume();
+                    }
+
+                    // Check if running after attempt
+                    if (audioContext.state !== 'running') {
+                         console.warn(`AudioContext could not be started/resumed. State: ${audioContext.state}`);
+                         return false; // Still not running
+                    }
+                    console.log(`AudioContext state: ${audioContext.state}`);
+
+                    // Set Tone's context *after* ensuring AudioContext is running
+                    await Tone.setContext(audioContext);
+                    console.log("Tone.js context set.");
+
+                    // *** IMPORTANT: Call Tone.start() ***
+                    await Tone.start();
+                    console.log("Tone.start() called successfully.");
+
+                    // Create sounds *synchronously* after context is set and Tone started
+                    createSoundEffects();
+
+                    // Setup music player (async loading)
+                    setupBackgroundMusic();
+
+                    audioInitialized = true; // Mark as initialized *after* setup calls
+                    console.log("Audio initialization complete.");
+                    return true;
+
+                } catch (error) {
+                    console.error("Error initializing audio:", error);
+                    audioInitialized = false; // Mark as failed
+                    return false;
+                }
             }
+             // Fallback case
+             console.warn("initializeAudio reached fallback state.");
+             return false;
         }
+
 
         function createSoundEffects() {
             if (clickSound && winSound && drawSound) return;
-            clickSound = new Tone.Synth({
-                oscillator: { type: 'triangle' },
-                envelope: { attack: 0.01, decay: 0.1, sustain: 0, release: 0.2 }
-            }).toDestination();
+             console.log("Creating sound effects...");
+             clickSound = new Tone.Synth({ oscillator: { type: 'triangle', frequency: 600 }, envelope: { attack: 0.005, decay: 0.05, sustain: 0.1, release: 0.1 } }).toDestination();
+             winSound = new Tone.Synth({ oscillator: { type: 'sine', frequency: 800 }, envelope: { attack: 0.01, decay: 0.2, sustain: 0.3, release: 0.8 } }).toDestination();
+             drawSound = new Tone.Synth({ oscillator: { type: 'square', frequency: 400 }, envelope: { attack: 0.01, decay: 0.1, sustain: 0.2, release: 0.5 } }).toDestination();
+             console.log("Sound effects created.");
+        }
 
-            winSound = new Tone.Synth({
-                oscillator: { type: 'sawtooth' },
-                envelope: { attack: 0.001, decay: 0.1, sustain: 0.3, release: 0.5 }
-            }).toDestination();
+        function playSound(sound, note = 'C4', duration = '16n') {
+             if (!audioInitialized || !Tone.context || Tone.context.state !== 'running') {
+                 console.warn(`Cannot play sound: Audio system not ready. Initialized: ${audioInitialized}, Context State: ${Tone.context ? Tone.context.state : 'N/A'}`);
+                 return;
+             }
+             if (!sound) {
+                 console.warn("Cannot play sound: Sound object is not defined/created yet.");
+                 return;
+             }
+             try {
+                sound.triggerAttackRelease(note, duration);
+             } catch (error) {
+                 console.error("Error triggering sound:", error, { sound });
+             }
+        }
 
-            drawSound = new Tone.Synth({
-                oscillator: { type: 'square' },
-                envelope: { attack: 0.001, decay: 0.1, sustain: 0.3, release: 0.5 }
+        function setupBackgroundMusic() {
+             if (!audioInitialized || backgroundMusic || !Tone.context || Tone.context.state !== 'running') {
+                 return;
+             }
+             console.log("Setting up background music player...");
+             // !!! USER ACTION REQUIRED !!!
+             // Find a "chill" background music track (MP3, OGG, WAV, etc.)
+             // and save it as 'chill-background-music.mp3' in the SAME FOLDER as this HTML file.
+             const musicUrl = './chill-background-music.mp3'; // Use local path
+
+             backgroundMusic = new Tone.Player({
+                url: musicUrl,
+                loop: true,
+                autostart: false,
+                volume: -18,
+                onload: () => {
+                    console.log("Background music loaded:", musicUrl);
+                    if (Tone.context.state === 'running' && backgroundMusic.state !== 'started') {
+                         try { backgroundMusic.start(); console.log("Background music started."); }
+                         catch (e) { console.error("Error starting background music after load:", e); }
+                    } else { console.warn(`Could not start background music after load. State: ${backgroundMusic.state}, Context state: ${Tone.context.state}`); }
+                },
+                onerror: (error) => {
+                    console.error(`Error loading background music from ${musicUrl}:`, error);
+                    backgroundMusic = null;
+                }
             }).toDestination();
         }
 
-        // --- Helper Functions ---
+        function stopBackgroundMusic() {
+            if (backgroundMusic && backgroundMusic.loaded && backgroundMusic.state === 'started') {
+                try { backgroundMusic.stop(); console.log("Background music stopped."); }
+                catch (error) { console.error("Error stopping background music:", error); }
+            }
+        }
+
+
+        // --- Game Logic ---
         function createBoard() {
-            gameBoard.innerHTML = '';
-            board = ['', '', '', '', '', '', '', '', ''];
-            gameOver = false;
-            gameOverOverlay.classList.add('hidden');
-            currentPlayer = 'X';
-            cells = [];
-            clearTimeout(botMoveTimeout);
-            clearTimeout(gameResetTimeout);
-            botPlaying = false; // Reset the flag here as well
+            console.log("Creating board...");
+            gameBoard.innerHTML = ''; // Clear previous board cells
+            board = ['', '', '', '', '', '', '', '', '']; // Reset internal board state
+            gameOver = false; // Reset game over flag <--- CRITICAL
+            botPlaying = false; // Reset bot playing flag <--- CRITICAL
+            gameOverOverlay.classList.remove('show'); // Hide game over message
+            // Ensure overlay is not blocking pointer events (added CSS rule too)
+            // gameOverOverlay.style.pointerEvents = 'none'; // Redundant if CSS is correct
+
+            currentPlayer = 'X'; // Reset to starting player
+            cells = []; // Clear old cell references
+            clearTimeout(botMoveTimeout); // Clear any pending bot move
+            clearTimeout(gameResetTimeout); // Clear auto-reset timeout
+            stopBackgroundMusic(); // Stop music on reset
+
+            // Create new cells and add listeners
             for (let i = 0; i < 9; i++) {
                 const cell = document.createElement('div');
                 cell.classList.add('cell');
                 cell.dataset.index = i;
+                // *** Add the event listener to the NEW cell ***
                 cell.addEventListener('click', handleCellClick);
                 gameBoard.appendChild(cell);
                 cells.push(cell);
             }
-            updateBoard();
+            updateBoard(); // Update display
+            console.log("Board created/reset. gameOver:", gameOver, "botPlaying:", botPlaying); // Log flag states
+
+             // Attempt to restart music
+             if(audioInitialized && backgroundMusic && backgroundMusic.loaded) {
+                 if (Tone.context.state === 'running' && backgroundMusic.state !== 'started') {
+                     try { backgroundMusic.start(); console.log("Background music restarted after reset."); }
+                     catch (error) { console.error("Error restarting background music:", error); }
+                 }
+             }
         }
 
         function updateBoard() {
             cells.forEach((cell, index) => {
                 cell.textContent = board[index];
-                cell.className = `cell ${board[index] ? (board[index] === 'X' ? 'x' : 'o') : ''}`;
+                cell.classList.remove('x', 'o');
+                if (board[index]) {
+                    cell.classList.add(board[index].toLowerCase());
+                }
             });
         }
 
-        function checkWin(player) {
-            const winPatterns = [
-                [0, 1, 2], [3, 4, 5], [6, 7, 8],
-                [0, 3, 6], [1, 4, 7], [2, 5, 8],
-                [0, 4, 8], [2, 4, 6]
-            ];
-            for (let pattern of winPatterns) {
-                const [a, b, c] = pattern;
-                if (board[a] && board[a] === board[b] && board[a] === board[c]) {
-                    return true;
-                }
-            }
-            return false;
+        // Make the handler async to use await
+        async function handleCellClick(event) {
+             // *** ADDED LOG ***: Check if handler fires at all after reset
+             console.log(`handleCellClick fired for index: ${event.target.dataset.index}. Current state - gameOver: ${gameOver}, botPlaying: ${botPlaying}`);
+
+             // Try to initialize/resume audio on click, await completion
+             const audioReady = await initializeAudio(); // Use await
+
+             if (!audioReady) {
+                 console.warn("Audio initialization/resume failed, sound will be disabled for this action.");
+                 processClick(event.target); // Proceed without sound
+                 return;
+             }
+             // If audio ready, proceed
+             processClick(event.target);
         }
 
+        function processClick(targetCell) {
+             // *** ADDED LOG ***: Check flags just before the blocking condition
+             console.log(`processClick check. gameOver: ${gameOver}, botPlaying: ${botPlaying}`);
+             if (gameOver || botPlaying) {
+                 console.log("Click ignored: Game over or bot playing.");
+                 return; // Ignore clicks if game over or bot thinking
+             }
+
+             const index = parseInt(targetCell.dataset.index);
+
+             if (board[index] === '') {
+                 playSound(clickSound); // Play sound
+                 board[index] = currentPlayer; // Update state
+                 updateBoard(); // Update visuals
+
+                 // Check win/draw
+                 const winner = checkWin();
+                 if (winner) {
+                     console.log(`Winner found: ${winner}`);
+                     handleGameOver(winner);
+                     return;
+                 } else if (isBoardFull()) {
+                     console.log("Board full: Draw");
+                     handleGameOver(null); // Draw
+                     return;
+                 }
+
+                 // Switch player & potentially trigger bot
+                 switchPlayer();
+                 console.log(`Player switched to: ${currentPlayer}`);
+                 if (gameMode === 'player-vs-bot' && currentPlayer === 'O') {
+                     botPlaying = true;
+                     console.log("Bot's turn. Scheduling move...");
+                     botMoveTimeout = setTimeout(botMove, 600 + Math.random() * 400);
+                 }
+             } else {
+                 console.log("Click ignored: Cell already taken.");
+             }
+        }
+
+
+        function checkWin() {
+            // (Function remains the same)
+            const winPatterns = [ [0, 1, 2], [3, 4, 5], [6, 7, 8], [0, 3, 6], [1, 4, 7], [2, 5, 8], [0, 4, 8], [2, 4, 6] ];
+            for (let pattern of winPatterns) { const [a, b, c] = pattern; if (board[a] && board[a] === board[b] && board[a] === board[c]) { return board[a]; } } return null;
+        }
         function isBoardFull() {
+            // (Function remains the same)
             return board.every(cell => cell !== '');
         }
-
         function switchPlayer() {
+            // (Function remains the same)
             currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
         }
 
-        // --- Game Logic ---
-        function handleCellClick(event) {
-            // Resume audio context on first user interaction
-            if (!audioContext) {
-                initAudio();
-            }
-             if (audioContext.state === 'suspended') {
-                  audioContext.resume().then(() => {
-                      createSoundEffects();
-                      playSound(clickSound);
-                  }).catch(err =>{
-                    console.log(err);
-                  })
-             } else {
-                playSound(clickSound);
-             }
-
-
-            if (gameOver || botPlaying) return; // Prevent clicks during bot's turn
-
-            const index = parseInt(event.target.dataset.index);
-
-            if (board[index] === '') {
-                board[index] = currentPlayer;
-                updateBoard();
-
-
-                if (checkWin(currentPlayer)) {
-                    handleGameOver(currentPlayer);
-                    return;
-                } else if (isBoardFull()) {
-                    handleGameOver(null);
-                    return;
-                }
-
-                switchPlayer();
-
-                if (gameMode === 'player-vs-bot') {
-                    botPlaying = true; // Set the flag before calling botMove
-                    // Call botMove directly after the player's move
-                    botMoveTimeout = setTimeout(botMove, 500); // Short delay for better UX
-                }
-            }
-        }
-
-        function playSound(sound) {
-            if (sound && audioContext && audioContext.state === 'running') {
-                sound.triggerAttackRelease('C4', '8n');
-            }
-        }
-
         function handleGameOver(winner) {
-            gameOver = true;
-            let message = winner ? `${winner} wins!` : "It's a draw!";
-            if (gameMode === 'player-vs-bot') {
-                message = winner === 'O' ? "You lost!" : winner === 'X' ? "You won!" : "It's a draw!";
-            }
-            gameOverText.textContent = message;
-            gameOverOverlay.classList.add('show');
+            console.log(`Handling game over. Winner: ${winner || 'Draw'}`);
+            gameOver = true; // Set game over flag
+            botPlaying = false; // Ensure bot flag is cleared just in case
+            clearTimeout(botMoveTimeout);
+
+            let message = "";
             if (winner) {
-                playSound(winSound);
+                message = winner === 'O' && gameMode === 'player-vs-bot' ? "Bot wins!" : winner === 'X' && gameMode === 'player-vs-bot' ? "You win!" : `${winner} wins!`;
+                playSound(winSound, winner === 'X' ? 'C5' : 'G4', '4n');
             } else {
-                playSound(drawSound);
+                message = "It's a draw!";
+                playSound(drawSound, 'A3', '2n');
             }
 
-            clearTimeout(botMoveTimeout); // Clear any pending bot move
+            gameOverText.textContent = message;
+            gameOverOverlay.style.display = 'flex'; // Make visible
+            // gameOverOverlay.style.pointerEvents = 'auto'; // Redundant if CSS is correct
+            requestAnimationFrame(() => { gameOverOverlay.classList.add('show'); }); // Trigger transition
+
+            // Auto-reset timeout
+            clearTimeout(gameResetTimeout);
             gameResetTimeout = setTimeout(() => {
-                gameOverOverlay.classList.remove('show');
-                createBoard();
-            }, 3000);
+                 console.log("Auto-resetting game after delay...");
+                 gameOverOverlay.classList.remove('show');
+                 // gameOverOverlay.style.pointerEvents = 'none'; // Redundant if CSS is correct
+
+                 // Use transitionend event for more reliable timing than setTimeout
+                 gameOverOverlay.addEventListener('transitionend', function handleTransitionEnd() {
+                     // Check if the game wasn't manually reset in the meantime AND overlay is hidden
+                     if (gameOver && !gameOverOverlay.classList.contains('show')) {
+                         console.log("Overlay transition ended, calling createBoard.");
+                         createBoard();
+                     }
+                     // Remove listener after it runs once
+                     gameOverOverlay.removeEventListener('transitionend', handleTransitionEnd);
+                 }, { once: true }); // Ensure listener runs only once
+
+                 // Fallback timeout in case transitionend doesn't fire (e.g., display: none)
+                 // Set slightly longer than transition duration
+                 // setTimeout(() => {
+                 //     if (gameOver && !gameOverOverlay.classList.contains('show')) {
+                 //         console.log("Fallback timeout triggered, calling createBoard.");
+                 //         createBoard();
+                 //     }
+                 // }, 550); // Match CSS transition duration + buffer
+
+             }, 3000); // 3 seconds delay before starting fade out
         }
 
-        // --- AI (Minimax) ---
-        function botMove() {
-            if (gameOver) return;
-            if (gameMode !== 'player-vs-bot') return;
 
-            let bestMove = findBestMove(board);
-            board[bestMove] = 'O';
-            updateBoard();
-            playSound(clickSound);
-
-            if (checkWin('O')) {
-                handleGameOver('O');
-                return;
-            } else if (isBoardFull()) {
-                handleGameOver(null);
-                return;
-            }
-
-            switchPlayer();
-            botPlaying = false;
-        }
-
-        const scores = {
-            X: -1,
-            O: 1,
-            draw: 0
-        };
-
+        // --- AI (Simple Strategy) ---
         function findBestMove(currentBoard) {
-            let bestMove = -1;
-            let bestScore = -Infinity;
-
-            // 1. Check for winning move
-            for (let i = 0; i < 9; i++) {
-                if (currentBoard[i] === '') {
-                    currentBoard[i] = 'O';
-                    if (checkWin('O')) {
-                        bestMove = i;
-                        currentBoard[i] = '';
-                        return bestMove;
-                    }
-                    currentBoard[i] = '';
-                }
-            }
-
-            // 2. Block player's winning move
-            for (let i = 0; i < 9; i++) {
-                if (currentBoard[i] === '') {
-                    currentBoard[i] = 'X';
-                    if (checkWin('X')) {
-                        bestMove = i;
-                        currentBoard[i] = '';
-                        return bestMove;
-                    }
-                    currentBoard[i] = '';
-                }
-            }
-
-            // 3. Try to take the center
-            if (currentBoard[4] === '') {
-                return 4;
-            }
-
-            // 4. Try to take a corner
-            const corners = [0, 2, 6, 8];
-            for (let i = 0; i < corners.length; i++) {
-                if (currentBoard[corners[i]] === '') {
-                    return corners[i];
-                }
-            }
-
-            // 5. Take any available cell
-            for (let i = 0; i < 9; i++) {
-                if (currentBoard[i] === '') {
-                    return i;
-                }
-            }
-
-            return bestMove;
+             // (Function remains the same)
+             let tempBoard = [...currentBoard];
+             for (let i = 0; i < 9; i++) { if (tempBoard[i] === '') { tempBoard[i] = 'O'; if (checkWinInternal(tempBoard) === 'O') { return i; } tempBoard[i] = ''; } }
+             for (let i = 0; i < 9; i++) { if (tempBoard[i] === '') { tempBoard[i] = 'X'; if (checkWinInternal(tempBoard) === 'X') { tempBoard[i] = ''; return i; } tempBoard[i] = ''; } }
+             if (tempBoard[4] === '') return 4;
+             const corners = [0, 2, 6, 8]; const oppositeCorners = { 0: 8, 2: 6, 6: 2, 8: 0 }; for (let corner of corners) { if (tempBoard[corner] === 'X' && tempBoard[oppositeCorners[corner]] === '') { return oppositeCorners[corner]; } }
+             const emptyCorners = corners.filter(i => tempBoard[i] === ''); if (emptyCorners.length > 0) { return emptyCorners[Math.floor(Math.random() * emptyCorners.length)]; }
+             const sides = [1, 3, 5, 7]; const emptySides = sides.filter(i => tempBoard[i] === ''); if (emptySides.length > 0) { return emptySides[Math.floor(Math.random() * emptySides.length)]; }
+             for (let i = 0; i < 9; i++) { if (tempBoard[i] === '') return i; } console.error("AI couldn't find any empty cell!"); return -1;
         }
-
-        function minimax(currentBoard, isMaximizing) {
-            if (checkWin('X')) return scores.X;
-            if (checkWin('O')) return scores.O;
-            if (isBoardFull()) return scores.draw;
-
-            if (isMaximizing) {
-                let bestScore = -Infinity;
-                for (let i = 0; i < 9; i++) {
-                    if (currentBoard[i] === '') {
-                        currentBoard[i] = 'O';
-                        let score = minimax(currentBoard, false);
-                        currentBoard[i] = '';
-                        bestScore = Math.max(score, bestScore);
-                    }
-                }
-                return bestScore;
-            } else {
-                let bestScore = Infinity;
-                for (let i = 0; i < 9; i++) {
-                    if (currentBoard[i] === '') {
-                        currentBoard[i] = 'X';
-                        let score = minimax(currentBoard, true);
-                        currentBoard[i] = '';
-                        bestScore = Math.min(score, bestScore);
-                    }
-                }
-                return bestScore;
-            }
+        function checkWinInternal(boardToCheck) {
+             // (Function remains the same)
+             const winPatterns = [ [0, 1, 2], [3, 4, 5], [6, 7, 8], [0, 3, 6], [1, 4, 7], [2, 5, 8], [0, 4, 8], [2, 4, 6] ];
+             for (let pattern of winPatterns) { const [a, b, c] = pattern; if (boardToCheck[a] && boardToCheck[a] === boardToCheck[b] && boardToCheck[a] === boardToCheck[c]) { return boardToCheck[a]; } } return null;
+         }
+        function botMove() {
+            // (Function remains the same, logging added previously)
+            console.log("Executing bot move...");
+            if (gameOver || currentPlayer !== 'O') { console.log("Bot move skipped."); botPlaying = false; return; }
+            const bestMoveIndex = findBestMove([...board]);
+            if (bestMoveIndex !== -1 && board[bestMoveIndex] === '') {
+                console.log(`Bot chose index: ${bestMoveIndex}`);
+                playSound(clickSound, 'E4');
+                board[bestMoveIndex] = 'O'; updateBoard();
+                const winner = checkWin();
+                if (winner) { console.log(`Bot wins!`); handleGameOver(winner); }
+                else if (isBoardFull()) { console.log("Board full after bot move: Draw"); handleGameOver(null); }
+                else { switchPlayer(); console.log(`Player switched back to: ${currentPlayer}`); botPlaying = false; }
+            } else { console.error("Bot couldn't find valid move."); switchPlayer(); botPlaying = false; }
         }
 
         // --- Event Listeners ---
-        playerVsPlayerButton.addEventListener('click', () => {
-            gameMode = 'player-vs-player';
-            playerVsPlayerButton.classList.add('active');
-            playerVsBotButton.classList.remove('active');
-            createBoard();
-            initAudio();
-        });
+        function setupEventListeners() {
+            // (Listeners remain the same async structure)
+            playerVsPlayerButton.addEventListener('click', async () => {
+                console.log("Player vs Player button clicked.");
+                const success = await initializeAudio();
+                if (!success) console.warn("Audio init failed on mode change.");
+                gameMode = 'player-vs-player'; playerVsPlayerButton.classList.add('active'); playerVsBotButton.classList.remove('active'); createBoard();
+            });
+            playerVsBotButton.addEventListener('click', async () => {
+                console.log("Player vs Bot button clicked.");
+                 const success = await initializeAudio();
+                 if (!success) console.warn("Audio init failed on mode change.");
+                 gameMode = 'player-vs-bot'; playerVsBotButton.classList.add('active'); playerVsPlayerButton.classList.remove('active'); createBoard();
+            });
+            resetButton.addEventListener('click', async () => {
+                console.log("Reset button clicked.");
+                 const success = await initializeAudio();
+                 if (!success) console.warn("Audio init failed on reset.");
+                 createBoard(); // Reset board regardless
+            });
+        }
 
-        playerVsBotButton.addEventListener('click', () => {
-            gameMode = 'player-vs-bot';
-            playerVsBotButton.classList.add('active');
-            playerVsPlayerButton.classList.remove('active');
-            createBoard();
-            initAudio();
-        });
+        // --- Initialize Game ---
+        function initGame() {
+             // (Function remains the same)
+             console.log("Initializing game...");
+             playerVsPlayerButton.classList.add('active'); createBoard(); setupEventListeners();
+             console.log("Game Initialized. Waiting for user interaction to start audio.");
+         }
+         document.addEventListener('DOMContentLoaded', initGame);
 
-        resetButton.addEventListener('click', () => {
-            createBoard();
-            initAudio();
-        });
-
-        // --- Initialize ---
-        playerVsPlayerButton.classList.add('active');
-        createBoard();
-        initAudio();
     </script>
 </body>
 </html>
