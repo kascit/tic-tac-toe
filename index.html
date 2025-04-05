@@ -4,6 +4,7 @@
     <title>Tic Tac Toe</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <link rel="icon" href="https://upload.wikimedia.org/wikipedia/commons/thumb/3/34/X_mark.svg/1200px-X_mark.svg.png" type="image/x-icon">
     <style>
         body {
             background-color: #111827;
@@ -255,10 +256,25 @@
         let drawSound;
 
         function initAudio() {
-            if (audioContext) return; // only initialize once
-            audioContext = new AudioContext();
-            Tone.setContext(audioContext);
+            if (!audioContext) {
+                audioContext = new AudioContext();
+                Tone.setContext(audioContext);
+            }
 
+            if (audioContext.state === 'suspended') {
+                audioContext.resume().then(() => {
+                    console.log('AudioContext resumed');
+                    createSoundEffects(); // Call this after successful resume
+                }).catch(error => {
+                    console.error('Error resuming audio context', error);
+                });
+            } else {
+                 createSoundEffects();
+            }
+        }
+
+        function createSoundEffects() {
+            if (clickSound && winSound && drawSound) return;
             clickSound = new Tone.Synth({
                 oscillator: { type: 'triangle' },
                 envelope: { attack: 0.01, decay: 0.1, sustain: 0, release: 0.2 }
@@ -332,12 +348,18 @@
             // Resume audio context on first user interaction
             if (!audioContext) {
                 initAudio();
-                audioContext.resume().then(() => {
-                    // console.log('AudioContext resumed');
-                }).catch(e => {
-                    console.error('Error resuming AudioContext:', e);
-                });
             }
+             if (audioContext.state === 'suspended') {
+                  audioContext.resume().then(() => {
+                      createSoundEffects();
+                      playSound(clickSound);
+                  }).catch(err =>{
+                    console.log(err);
+                  })
+             } else {
+                playSound(clickSound);
+             }
+
 
             if (gameOver || botPlaying) return; // Prevent clicks during bot's turn
 
@@ -346,7 +368,7 @@
             if (board[index] === '') {
                 board[index] = currentPlayer;
                 updateBoard();
-                clickSound.triggerAttackRelease('C4', '8n');
+
 
                 if (checkWin(currentPlayer)) {
                     handleGameOver(currentPlayer);
@@ -366,6 +388,12 @@
             }
         }
 
+        function playSound(sound) {
+            if (sound && audioContext && audioContext.state === 'running') {
+                sound.triggerAttackRelease('C4', '8n');
+            }
+        }
+
         function handleGameOver(winner) {
             gameOver = true;
             let message = winner ? `${winner} wins!` : "It's a draw!";
@@ -375,9 +403,9 @@
             gameOverText.textContent = message;
             gameOverOverlay.classList.add('show');
             if (winner) {
-                winSound.triggerAttackRelease('G4', '2n');
+                playSound(winSound);
             } else {
-                drawSound.triggerAttackRelease('C3', '2n');
+                playSound(drawSound);
             }
 
             clearTimeout(botMoveTimeout); // Clear any pending bot move
@@ -395,7 +423,7 @@
             let bestMove = findBestMove(board);
             board[bestMove] = 'O';
             updateBoard();
-            clickSound.triggerAttackRelease('C4', '8n');
+            playSound(clickSound);
 
             if (checkWin('O')) {
                 handleGameOver('O');
@@ -504,9 +532,7 @@
             playerVsPlayerButton.classList.add('active');
             playerVsBotButton.classList.remove('active');
             createBoard();
-             if (!audioContext) {
-                initAudio();
-             }
+            initAudio();
         });
 
         playerVsBotButton.addEventListener('click', () => {
@@ -514,24 +540,18 @@
             playerVsBotButton.classList.add('active');
             playerVsPlayerButton.classList.remove('active');
             createBoard();
-            if (!audioContext) {
-                initAudio();
-             }
+            initAudio();
         });
 
         resetButton.addEventListener('click', () => {
             createBoard();
-             if (!audioContext) {
-                initAudio();
-             }
+            initAudio();
         });
 
         // --- Initialize ---
         playerVsPlayerButton.classList.add('active');
         createBoard();
-        if (!audioContext) {
-             initAudio();
-        }
+        initAudio();
     </script>
 </body>
 </html>
