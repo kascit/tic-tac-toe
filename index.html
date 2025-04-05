@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Tic Tac Toe</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background-color: #111827;
+            color: #f9fafb;
+            font-family: 'Press Start 2P', monospace;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        .container {
+            width: 95%;
+            max-width: 500px;
+            text-align: center;
+            background-color: rgba(31, 41, 55, 0.1);
+            padding: 20px;
+            border-radius: 0.75rem;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.2);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 10px;
+        }
+
+        h1 {
+            margin-bottom: 1rem;
+            color: #6366f1;
+            font-size: 1.5rem;
+            animation: fadeIn 1s ease, pulse 2s infinite alternate;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes pulse {
+            from { transform: scale(1); }
+            to { transform: scale(1.06); }
+        }
+
+        #game-board {
+            display: grid;
+            grid-template-columns: repeat(3, 100px);
+            grid-template-rows: repeat(3, 100px);
+            gap: 0.5rem;
+            margin: 0 auto 1.5rem;
+            perspective: 500px;
+            width: 100%;
+            max-width: 310px;
+        }
+
+        .cell {
+            width: 100px;
+            height: 100px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2.5rem;
+            cursor: pointer;
+            border: 2px solid #4b5563;
+            border-radius: 0.375rem;
+            transition: background-color 0.2s ease, transform 0.5s ease;
+            background-color: #374151;
+            color: #f9fafb;
+            transform: rotateY(0deg);
+        }
+
+        .cell:hover {
+            background-color: #4b5563;
+            transform: scale(1.05);
+        }
+
+        .cell.x {
+            color: #f472b6;
+            animation: flipX 0.8s ease;
+        }
+
+        .cell.o {
+            color: #8b5cf6;
+            animation: flipO 0.8s ease;
+        }
+
+        @keyframes flipX {
+          from { transform: rotateY(0deg); }
+          to { transform: rotateY(360deg); }
+        }
+        @keyframes flipO {
+          from { transform: rotateY(0deg); }
+          to { transform: rotateY(-360deg); }
+        }
+
+        #options {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 1.5rem;
+            width: 100%;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .option-button {
+            padding: 0.5rem 1rem;
+            margin: 0 0.5rem;
+            background-color: #4b5563;
+            color: #f9fafb;
+            border: 2px solid #6b7280;
+            border-radius: 0.375rem;
+            cursor: pointer;
+            transition: background-color 0.2s ease, color 0.2s ease;
+            font-family: 'Press Start 2P', monospace;
+            font-size: 0.7rem;
+        }
+
+        .option-button:hover {
+            background-color: #6b7280;
+            color: #ffffff;
+        }
+
+        .option-button.active {
+            background-color: #6366f1;
+            color: #ffffff;
+            border-color: #8b5cf6;
+        }
+
+        #reset-button {
+            padding: 0.5rem 1rem;
+            background-color: #ef4444;
+            color: #f9fafb;
+            border: none;
+            border-radius: 0.375rem;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            margin-top: 1.5rem;
+            font-family: 'Press Start 2P', monospace;
+            font-size: 0.7rem;
+            animation: pulseRed 2s infinite alternate;
+        }
+        @keyframes pulseRed {
+            from { background-color: #ef4444; }
+            to { background-color: #dc2626; }
+        }
+
+        #reset-button:hover {
+            background-color: #dc2626;
+        }
+
+        .game-over-overlay {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(0, 0, 0, 0.8);
+            z-index: 10;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+
+        .game-over-overlay.show {
+            opacity: 1;
+            display: flex;
+        }
+
+        .game-over-content {
+            padding: 2rem;
+            border-radius: 0.75rem;
+            background-color: #1f2937;
+            color: #f9fafb;
+            font-size: 1.25rem;
+            font-weight: bold;
+            transform: translateY(-20px);
+            transition: transform 0.5s ease;
+        }
+
+        .game-over-overlay.show .game-over-content{
+             transform: translateY(0px);
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        @media (max-width: 640px) {
+            .container {
+                padding: 15px;
+            }
+            #game-board {
+                grid-template-columns: repeat(3, 80px);
+                grid-template-rows: repeat(3, 80px);
+                max-width: 240px;
+            }
+            .cell {
+                width: 80px;
+                height: 80px;
+                font-size: 2rem;
+            }
+            .option-button {
+                font-size: 0.6rem;
+                padding: 0.5rem;
+            }
+             h1{
+                font-size: 1rem
+             }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Tic Tac Toe</h1>
+        <div id="game-board"></div>
+        <div id="options">
+            <button class="option-button" id="player-vs-player">2 Player</button>
+            <button class="option-button" id="player-vs-bot">vs Bot</button>
+        </div>
+        <button id="reset-button">Reset</button>
+        <div class="game-over-overlay hidden" id="game-over-overlay">
+            <div class="game-over-content" id="game-over-text"></div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/tone"></script>
+    <script>
+       // --- Game Setup ---
+        let board = ['', '', '', '', '', '', '', '', ''];
+        let currentPlayer = 'X';
+        let gameMode = 'player-vs-player';
+        let gameOver = false;
+        let cells = [];
+        let botMoveTimeout;
+        let gameResetTimeout;
+        let botPlaying = false; // Add this flag
+
+        const gameBoard = document.getElementById('game-board');
+        const playerVsPlayerButton = document.getElementById('player-vs-player');
+        const playerVsBotButton = document.getElementById('player-vs-bot');
+        const resetButton = document.getElementById('reset-button');
+        const gameOverOverlay = document.getElementById('game-over-overlay');
+        const gameOverText = document.getElementById('game-over-text');
+
+        // --- Sound Effects (Tone.js) ---
+        const clickSound = new Tone.Synth({
+            oscillator: { type: 'triangle' },
+            envelope: { attack: 0.01, decay: 0.1, sustain: 0, release: 0.2 }
+        }).toDestination();
+
+        const winSound = new Tone.Synth({
+            oscillator: { type: 'sawtooth' },
+            envelope: { attack: 0.001, decay: 0.1, sustain: 0.3, release: 0.5 }
+        }).toDestination();
+
+        const drawSound = new Tone.Synth({
+            oscillator: { type: 'square' },
+            envelope: { attack: 0.001, decay: 0.1, sustain: 0.3, release: 0.5 }
+        }).toDestination();
+
+        // --- Helper Functions ---
+        function createBoard() {
+            gameBoard.innerHTML = '';
+            board = ['', '', '', '', '', '', '', '', ''];
+            gameOver = false;
+            gameOverOverlay.classList.add('hidden');
+            currentPlayer = 'X';
+            cells = [];
+            clearTimeout(botMoveTimeout);
+            clearTimeout(gameResetTimeout);
+            botPlaying = false; // Reset the flag here as well
+            for (let i = 0; i < 9; i++) {
+                const cell = document.createElement('div');
+                cell.classList.add('cell');
+                cell.dataset.index = i;
+                cell.addEventListener('click', handleCellClick);
+                gameBoard.appendChild(cell);
+                cells.push(cell);
+            }
+            updateBoard();
+        }
+
+        function updateBoard() {
+            cells.forEach((cell, index) => {
+                cell.textContent = board[index];
+                cell.className = `cell ${board[index]}`;
+            });
+        }
+
+        function checkWin(player) {
+            const winPatterns = [
+                [0, 1, 2], [3, 4, 5], [6, 7, 8],
+                [0, 3, 6], [1, 4, 7], [2, 5, 8],
+                [0, 4, 8], [2, 4, 6]
+            ];
+            for (let pattern of winPatterns) {
+                const [a, b, c] = pattern;
+                if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function isBoardFull() {
+            return board.every(cell => cell !== '');
+        }
+
+        function switchPlayer() {
+            currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+        }
+
+        // --- Game Logic ---
+        function handleCellClick(event) {
+            if (gameOver || botPlaying) return; // Prevent clicks during bot's turn
+
+            const index = parseInt(event.target.dataset.index);
+
+            if (board[index] === '') {
+                board[index] = currentPlayer;
+                updateBoard();
+                clickSound.triggerAttackRelease('C4', '8n');
+
+                if (checkWin(currentPlayer)) {
+                    handleGameOver(currentPlayer);
+                    return;
+                } else if (isBoardFull()) {
+                    handleGameOver(null);
+                    return;
+                }
+
+                switchPlayer();
+
+                if (gameMode === 'player-vs-bot') {
+                    botPlaying = true; // Set the flag before calling botMove
+                    // Call botMove directly after the player's move
+                    botMoveTimeout = setTimeout(botMove, 500); // Short delay for better UX
+                }
+            }
+        }
+
+        function handleGameOver(winner) {
+            gameOver = true;
+            let message = winner ? `${winner} wins!` : "It's a draw!";
+            if (gameMode === 'player-vs-bot') {
+                message = winner === 'O' ? "You lost!" : winner === 'X' ? "You won!" : "It's a draw!";
+            }
+            gameOverText.textContent = message;
+            gameOverOverlay.classList.add('show');
+            if (winner) {
+                winSound.triggerAttackRelease('G4', '2n');
+            } else {
+                drawSound.triggerAttackRelease('C3', '2n');
+            }
+
+            clearTimeout(botMoveTimeout); // Clear any pending bot move
+            gameResetTimeout = setTimeout(() => {
+                gameOverOverlay.classList.remove('show');
+                createBoard();
+            }, 3000);
+        }
+
+        // --- AI (Minimax) ---
+        function botMove() {
+            if (gameOver) return;
+            if (gameMode !== 'player-vs-bot') return;
+
+            let bestMove = findBestMove(board);
+            board[bestMove] = 'O';
+            updateBoard();
+            clickSound.triggerAttackRelease('C4', '8n');
+
+            if (checkWin('O')) {
+                handleGameOver('O');
+                return;
+            } else if (isBoardFull()) {
+                handleGameOver(null);
+                return;
+            }
+
+            switchPlayer();
+            botPlaying = false;
+        }
+
+        const scores = {
+            X: -1,
+            O: 1,
+            draw: 0
+        };
+
+        function findBestMove(currentBoard) {
+            let bestMove = -1;
+            let bestScore = -Infinity;
+
+            // 1. Check for winning move
+            for (let i = 0; i < 9; i++) {
+                if (currentBoard[i] === '') {
+                    currentBoard[i] = 'O';
+                    if (checkWin('O')) {
+                        bestMove = i;
+                        currentBoard[i] = '';
+                        return bestMove;
+                    }
+                    currentBoard[i] = '';
+                }
+            }
+
+            // 2. Block player's winning move
+            for (let i = 0; i < 9; i++) {
+                if (currentBoard[i] === '') {
+                    currentBoard[i] = 'X';
+                    if (checkWin('X')) {
+                        bestMove = i;
+                        currentBoard[i] = '';
+                        return bestMove;
+                    }
+                    currentBoard[i] = '';
+                }
+            }
+
+            // 3. Try to take the center
+            if (currentBoard[4] === '') {
+                return 4;
+            }
+
+            // 4. Try to take a corner
+            const corners = [0, 2, 6, 8];
+            for (let i = 0; i < corners.length; i++) {
+                if (currentBoard[corners[i]] === '') {
+                    return corners[i];
+                }
+            }
+
+            // 5. Take any available cell
+            for (let i = 0; i < 9; i++) {
+                if (currentBoard[i] === '') {
+                    return i;
+                }
+            }
+
+            return bestMove;
+        }
+
+        function minimax(currentBoard, isMaximizing) {
+            if (checkWin('X')) return scores.X;
+            if (checkWin('O')) return scores.O;
+            if (isBoardFull()) return scores.draw;
+
+            if (isMaximizing) {
+                let bestScore = -Infinity;
+                for (let i = 0; i < 9; i++) {
+                    if (currentBoard[i] === '') {
+                        currentBoard[i] = 'O';
+                        let score = minimax(currentBoard, false);
+                        currentBoard[i] = '';
+                        bestScore = Math.max(score, bestScore);
+                    }
+                }
+                return bestScore;
+            } else {
+                let bestScore = Infinity;
+                for (let i = 0; i < 9; i++) {
+                    if (currentBoard[i] === '') {
+                        currentBoard[i] = 'X';
+                        let score = minimax(currentBoard, true);
+                        currentBoard[i] = '';
+                        bestScore = Math.min(score, bestScore);
+                    }
+                }
+                return bestScore;
+            }
+        }
+
+        // --- Event Listeners ---
+        playerVsPlayerButton.addEventListener('click', () => {
+            gameMode = 'player-vs-player';
+            playerVsPlayerButton.classList.add('active');
+            playerVsBotButton.classList.remove('active');
+            createBoard();
+        });
+
+        playerVsBotButton.addEventListener('click', () => {
+            gameMode = 'player-vs-bot';
+            playerVsBotButton.classList.add('active');
+            playerVsPlayerButton.classList.remove('active');
+            createBoard();
+        });
+
+        resetButton.addEventListener('click', createBoard);
+
+        // --- Initialize ---
+        playerVsPlayerButton.classList.add('active');
+        createBoard();
+    </script>
+</body>
+</html>
