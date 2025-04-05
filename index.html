@@ -300,7 +300,7 @@
         function updateBoard() {
             cells.forEach((cell, index) => {
                 cell.textContent = board[index];
-                cell.className = `cell ${board[index]}`;
+                cell.className = `cell ${board[index] ? (board[index] === 'X' ? 'x' : 'o') : ''}`;
             });
         }
 
