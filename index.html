@@ -240,6 +240,7 @@
         let botMoveTimeout;
         let gameResetTimeout;
         let botPlaying = false; // Add this flag
+        let audioContext; // Declare audioContext
 
         const gameBoard = document.getElementById('game-board');
         const playerVsPlayerButton = document.getElementById('player-vs-player');
@@ -249,20 +250,30 @@
         const gameOverText = document.getElementById('game-over-text');
 
         // --- Sound Effects (Tone.js) ---
-        const clickSound = new Tone.Synth({
-            oscillator: { type: 'triangle' },
-            envelope: { attack: 0.01, decay: 0.1, sustain: 0, release: 0.2 }
-        }).toDestination();
+        let clickSound;
+        let winSound;
+        let drawSound;
 
-        const winSound = new Tone.Synth({
-            oscillator: { type: 'sawtooth' },
-            envelope: { attack: 0.001, decay: 0.1, sustain: 0.3, release: 0.5 }
-        }).toDestination();
+        function initAudio() {
+            if (audioContext) return; // only initialize once
+            audioContext = new AudioContext();
+            Tone.setContext(audioContext);
 
-        const drawSound = new Tone.Synth({
-            oscillator: { type: 'square' },
-            envelope: { attack: 0.001, decay: 0.1, sustain: 0.3, release: 0.5 }
-        }).toDestination();
+            clickSound = new Tone.Synth({
+                oscillator: { type: 'triangle' },
+                envelope: { attack: 0.01, decay: 0.1, sustain: 0, release: 0.2 }
+            }).toDestination();
+
+            winSound = new Tone.Synth({
+                oscillator: { type: 'sawtooth' },
+                envelope: { attack: 0.001, decay: 0.1, sustain: 0.3, release: 0.5 }
+            }).toDestination();
+
+            drawSound = new Tone.Synth({
+                oscillator: { type: 'square' },
+                envelope: { attack: 0.001, decay: 0.1, sustain: 0.3, release: 0.5 }
+            }).toDestination();
+        }
 
         // --- Helper Functions ---
         function createBoard() {
@@ -318,6 +329,16 @@
 
         // --- Game Logic ---
         function handleCellClick(event) {
+            // Resume audio context on first user interaction
+            if (!audioContext) {
+                initAudio();
+                audioContext.resume().then(() => {
+                    // console.log('AudioContext resumed');
+                }).catch(e => {
+                    console.error('Error resuming AudioContext:', e);
+                });
+            }
+
             if (gameOver || botPlaying) return; // Prevent clicks during bot's turn
 
             const index = parseInt(event.target.dataset.index);
@@ -483,6 +504,9 @@
             playerVsPlayerButton.classList.add('active');
             playerVsBotButton.classList.remove('active');
             createBoard();
+             if (!audioContext) {
+                initAudio();
+             }
         });
 
         playerVsBotButton.addEventListener('click', () => {
@@ -490,13 +514,24 @@
             playerVsBotButton.classList.add('active');
             playerVsPlayerButton.classList.remove('active');
             createBoard();
+            if (!audioContext) {
+                initAudio();
+             }
         });
 
-        resetButton.addEventListener('click', createBoard);
+        resetButton.addEventListener('click', () => {
+            createBoard();
+             if (!audioContext) {
+                initAudio();
+             }
+        });
 
         // --- Initialize ---
         playerVsPlayerButton.classList.add('active');
         createBoard();
+        if (!audioContext) {
+             initAudio();
+        }
     </script>
 </body>
 </html>
